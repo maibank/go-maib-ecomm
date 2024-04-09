@@ -1,56 +1,55 @@
 package maib
 
 import (
-	"fmt"
-	"github.com/NikSays/go-maib-ecomm/requests"
-	"github.com/NikSays/go-maib-ecomm/types"
+	"net/url"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
-func Example() {
-	// Create new client
-	client, err := NewClient(Config{
-		PFXPath:                 "cert.pfx",
-		Passphrase:              "p4ssphr4s3",
-		MerchantHandlerEndpoint: "https://example.org/handler",
+const (
+	clientCertPath = "testdata/certs/client.pfx"
+	clientCertPass = "password"
+)
+
+func TestNewClient_OK(t *testing.T) {
+	_, err := NewClient(Config{
+		PFXPath:                 clientCertPath,
+		Passphrase:              clientCertPass,
+		MerchantHandlerEndpoint: "",
 	})
-	if err != nil {
-		panic(err)
-	}
 
-	// Send a Transaction Registration request.
-	// Equivalent to:
-	// command=v&amount=1000&currency=978&language=en&client_ip_addr=127.0.0.1&description=10+EUR+will+be+charged
-	res, err := client.Send(requests.RegisterTransaction{
-		TransactionType: requests.RegisterTransactionSMS,
-		Amount:          1000,
-		Currency:        types.CurrencyEUR,
-		ClientIPAddress: "127.0.0.1",
-		Description:     "10 EUR will be charged",
-		Language:        types.LanguageEnglish,
+	assert.Nil(t, err)
+}
+
+func TestNewClient_InvalidPath(t *testing.T) {
+	_, err := NewClient(Config{
+		PFXPath:                 clientCertPath + "wrong",
+		Passphrase:              clientCertPass,
+		MerchantHandlerEndpoint: "",
 	})
-	if err != nil {
-		panic(err)
-	}
 
-	// Decode response into RegisterTransactionResult struct.
-	newTransaction, err := requests.DecodeResponse[requests.RegisterTransactionResult](res)
+	assert.ErrorIs(t, err, os.ErrNotExist)
+}
 
-	// Send a Transaction Status request.
-	// Equivalent to:
-	// command=c&trans_id=xxxxxxxxxxxxxxxxxxxxxxxxxxx&client_ip_addr=127.0.0.1
-	res, err = client.Send(requests.TransactionStatus{
-		TransactionID:   newTransaction.TransactionID,
-		ClientIPAddress: "127.0.0.1",
+func TestNewClient_InvalidPass(t *testing.T) {
+	_, err := NewClient(Config{
+		PFXPath:                 clientCertPath,
+		Passphrase:              clientCertPass + "wrong",
+		MerchantHandlerEndpoint: "",
 	})
-	if err != nil {
-		panic(err)
-	}
 
-	// Decode response into TransactionStatusResult struct.
-	status, err := requests.DecodeResponse[requests.TransactionStatusResult](res)
-	if err != nil {
-		panic(err)
-	}
+	assert.ErrorIs(t, err, pkcs12.ErrIncorrectPassword)
+}
+func TestNewClient_InvalidEndpoint(t *testing.T) {
+	_, err := NewClient(Config{
+		PFXPath:                 clientCertPath,
+		Passphrase:              clientCertPass,
+		MerchantHandlerEndpoint: ":",
+	})
 
-	fmt.Println(status.Result)
+	var urlErr *url.Error
+	assert.ErrorAs(t, err, &urlErr)
 }

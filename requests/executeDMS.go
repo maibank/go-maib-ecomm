@@ -1,10 +1,12 @@
 package requests
 
 import (
+	"net/url"
+
+	"github.com/google/go-querystring/query"
+
 	"github.com/NikSays/go-maib-ecomm/internal/validators"
 	"github.com/NikSays/go-maib-ecomm/types"
-	"github.com/google/go-querystring/query"
-	"net/url"
 )
 
 const executeDMSCommand = "t"
@@ -30,8 +32,7 @@ type ExecuteDMS struct {
 	Description string `url:"description,omitempty"`
 }
 
-// ExecuteDMSResult contains data returned on execution of an DMS transaction,
-// if no error is encountered.
+// ExecuteDMSResult contains the response to a ExecuteDMS request.
 type ExecuteDMSResult struct {
 	// Transaction result status.
 	Result types.ResultEnum `mapstructure:"RESULT"`
@@ -42,14 +43,14 @@ type ExecuteDMSResult struct {
 	// Retrieval reference number returned from Card Suite FO.
 	RRN int `mapstructure:"RRN"`
 
-	// Approval Code returned from Card Suite FO (max 6 digits).
-	ApprovalCode int `mapstructure:"APPROVAL_CODE"`
+	// Approval Code returned from Card Suite FO (max 6 characters).
+	ApprovalCode string `mapstructure:"APPROVAL_CODE"`
 
 	// Masked card number.
 	CardNumber string `mapstructure:"CARD_NUMBER"`
 }
 
-func (payload ExecuteDMS) Encode() (url.Values, error) {
+func (payload ExecuteDMS) Values() (url.Values, error) {
 	v, err := query.Values(payload)
 	if err != nil {
 		return nil, err
